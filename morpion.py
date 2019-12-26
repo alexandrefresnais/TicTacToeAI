@@ -61,7 +61,7 @@ class Player:
         y = int(user_in[3])
         x = int(user_in[1])
         if board.board[y*3+x]!=' ':
-            return HumanTurn(board)
+            return self.HumanTurn(board)
         return (x,y)
 
     #Take a random action for a given board
@@ -71,7 +71,7 @@ class Player:
         x = randint(0, 2)
         y = randint(0,2)
         if board.board[y*3+x]!=' ':
-            return RandomAction(board)
+            return self.RandomAction(board)
         return (x,y)
 
     def OptimizedAction(self,board):
