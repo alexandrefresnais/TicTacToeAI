@@ -62,7 +62,6 @@ class Player:
         self.game_history = []
         self.nbWin = 0
         self.isRandom = isRandom
-        self.debug = False
 
     def HumanTurn(self, board):
         print(self.name + " it is your turn !")
@@ -91,8 +90,7 @@ class Player:
             tempBoard[action[1]*3+action[0]] = self.symbol
             hboard = hash(tuple(tempBoard))
             actionValue = (self.ValueFunction[hboard] if hboard in self.ValueFunction else 0)
-            if self.debug:
-                print("Playing ("+str(action[0])+","+str(action[1])+") is "+str(actionValue))
+
             if bestValue == None or bestValue < actionValue:
                 bestValue = actionValue
                 bestAction = action
@@ -147,37 +145,23 @@ def PlayGame(board, p1,p2, train = True):
             s, a, r,_ = players[currentPlayer%2].game_history[-1]
             players[currentPlayer%2].game_history[-1] = (s, a, r, hash(tuple(board.board)))
 
+        players[currentPlayer%2].game_history.append((hash(tuple(board.board)), action, reward, None))
 
         if reward != 0:
             #Game is finished and current player has won (no draw)
             players[currentPlayer%2].nbWin+=1
-            if p1.debug:
-                print()
-                print("p1 game history")
-                print(p1.game_history)
-                print("p2 game history")
-                print(p2.game_history)
-
-        players[currentPlayer%2].game_history.append((hash(tuple(board.board)), action, reward, None))
 
         currentPlayer +=1
 
-        if currentPlayer == 1 and p1.debug:
-            board.Display()
-        if p1.debug:
-            print("board hash is "+str(hash(tuple(board.board)))+" for this :" + str(tuple(board.board)))
-
-    if p1.debug:
-        board.Display()
     if train:
         p1.Train()
         p2.Train()
+
 
 def PlayGameHuman(board, p1,p2, train = True):
     board.reset()
     #No random anymore
     p1.epsilon = 0
-
     players = [p1,p2]
     random.shuffle(players)
     currentPlayer = 0
@@ -191,57 +175,34 @@ def PlayGameHuman(board, p1,p2, train = True):
             board.won = True
             board.Display()
             print(players[currentPlayer%2].name + " won")
+            return
 
         currentPlayer +=1
+    board.Display()
+    print("It's a draw !")
 
 
 if __name__ == "__main__":
     p1 = Player("IA_1","X",False, False)
     p2 = Player("IA_2","O", False, False)
     board = Board()
-    for i in range(100000):
+    for i in range(10000):
         if i%10 == 0:
             p1.epsilon =max(p1.epsilon*0.996,0.05)
             p2.epsilon =max(p2.epsilon*0.996,0.05)
             print("Game : " + str(i))
         PlayGame(board,p1,p2)
+
+    #Testing again full random player
     randomPlayer = Player("IA_2","O", False, True)
     p1.nbWin = 0
-    for i in range(0, 1000):
+    nbTest = 1000
+    for i in range(0, nbTest):
         PlayGame(board, p1, randomPlayer, train=False)
 
-    print("IA win rate", p1.nbWin/1000)
-    print("Random Player win rate", randomPlayer.nbWin/1000)
+    print("IA win rate", p1.nbWin/nbTest)
+    print("Random Player win rate", randomPlayer.nbWin/nbTest)
 
+    #Playing against you
     p4 = Player("Human","O",True,False)
     PlayGameHuman(board,p1,p4,False)
-
-
-
-if __name__ == "__main":
-    p1 = Player("IA_1","X",False, False)
-    p2 = Player("IA_2","O", False, False)
-
-    board = Board()
-    PlayGame(board,p1,p2)
-
-    test =  Board()
-    test.board[0]='O'
-    possibleActions = test.GetPossibleActions()
-    print("board hash at the beginning is "+str(hash(tuple(test.board))))
-    print()
-    print("Value function p1:")
-    print(p1.ValueFunction)
-    print("Value function p2:")
-    print(p2.ValueFunction)
-    print()
-    """
-    for action in possibleActions:
-        tempBoard = deepcopy(test.board)
-        tempBoard[action[1]*3+action[0]] = 'X'
-        print()
-        print("Did I seen "+str(tuple(tempBoard))+ "which is " + str(hash(tuple(tempBoard))))
-        if hash(tuple(tempBoard)) in p1.ValueFunction:
-            print(str(hash(tuple(tempBoard))) + "for this tuple" + str(tuple(tempBoard)))
-        else:
-            print("Never seen this board")"""
