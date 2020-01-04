@@ -1,8 +1,13 @@
+###########################################
+####### Author : Alexandre Fresnais #######
+#######     Made in December 2019   #######
+###########################################
+
 from random import randint
 import random
 import numpy as np
 from copy import deepcopy
-
+from sys import stdout
 
 class Board:
     def __init__(self):
@@ -96,7 +101,7 @@ class Player:
                 bestAction = action
         return bestAction
 
-    def IATurn(self,board):
+    def AITurn(self,board):
         #Randon Action
         if self.isRandom or random.uniform(0, 1) < self.epsilon:
             return self.RandomAction(board)
@@ -107,7 +112,7 @@ class Player:
         if self.isHuman:
             return self.HumanTurn(board)
         else:
-            return self.IATurn(board)
+            return self.AITurn(board)
 
     #Going throught history to update value function
     def Train(self):
@@ -127,13 +132,17 @@ class Player:
                 self.ValueFunction[s] = self.ValueFunction[s] + 0.1*(r - self.ValueFunction[s])
         self.game_history = []
 
-def PlayGame(board, p1,p2, train = True):
+
+def PlayGame(board, p1,p2, train = True, humanPlayer = False):
     board.reset()
     players = [p2,p1]
     random.shuffle(players)
     currentPlayer = 0
     reward = 0
     while not board.IsFinished():
+        if humanPlayer:
+            board.Display()
+
         action = players[currentPlayer%2].Turn(board)
         reward = board.step(action, players[currentPlayer%2].symbol)
 
@@ -150,6 +159,10 @@ def PlayGame(board, p1,p2, train = True):
         if reward != 0:
             #Game is finished and current player has won (no draw)
             players[currentPlayer%2].nbWin+=1
+            if humanPlayer:
+                board.won = True
+                board.Display()
+                print(players[currentPlayer%2].name + " won")
 
         currentPlayer +=1
 
@@ -157,52 +170,50 @@ def PlayGame(board, p1,p2, train = True):
         p1.Train()
         p2.Train()
 
-
-def PlayGameHuman(board, p1,p2, train = True):
-    board.reset()
-    #No random anymore
-    p1.epsilon = 0
-    players = [p1,p2]
-    random.shuffle(players)
-    currentPlayer = 0
-    reward = 0
-    while not board.IsFinished():
+    if humanPlayer:
         board.Display()
-        action = players[currentPlayer%2].Turn(board)
-        reward = board.step(action, players[currentPlayer%2].symbol)
-        if reward != 0:
-            #Game is finished
-            board.won = True
-            board.Display()
-            print(players[currentPlayer%2].name + " won")
-            return
+        print("It's a draw !")
 
-        currentPlayer +=1
-    board.Display()
-    print("It's a draw !")
-
+def Welcome():
+    print("Welcome to my Reinforcement learning AI for TicTacToe.")
+    print("The AI will first train and then you will be invited to play against it.")
+    inp = input("Please Enter 1 for a quick train and 2 for a full train\n")
+    if inp == '1':
+        print("Quick Train Selected")
+        return 10000
+    print("Full training selected")
+    return 100000
 
 if __name__ == "__main__":
-    p1 = Player("IA_1","X",False, False)
-    p2 = Player("IA_2","O", False, False)
+    p1 = Player("AI_1","X",False, False)
+    p2 = Player("AI_2","O", False, False)
     board = Board()
-    for i in range(10000):
+    nbTraining = Welcome()
+    for i in range(nbTraining+1):
         if i%10 == 0:
-            p1.epsilon =max(p1.epsilon*0.996,0.05)
-            p2.epsilon =max(p2.epsilon*0.996,0.05)
-            print("Game : " + str(i))
+            p1.epsilon =max(p1.epsilon*0.999,0.05)
+            p2.epsilon =max(p2.epsilon*0.999,0.05)
+            stdout.write("\rTraining %d/%d" %( i, nbTraining))
+            stdout.flush()
         PlayGame(board,p1,p2)
+    print()
 
-    #Testing again full random player
-    randomPlayer = Player("IA_2","O", False, True)
+    #Testing against full random player
+    randomPlayer = Player("AI_2","O", False, True)
     p1.nbWin = 0
     nbTest = 1000
+
+    #No random from this point from AI
+    p1.epsilon = 0
+
     for i in range(0, nbTest):
         PlayGame(board, p1, randomPlayer, train=False)
 
-    print("IA win rate", p1.nbWin/nbTest)
+    print("AI win rate", p1.nbWin/nbTest)
     print("Random Player win rate", randomPlayer.nbWin/nbTest)
 
     #Playing against you
-    p4 = Player("Human","O",True,False)
-    PlayGameHuman(board,p1,p4,False)
+    while True:
+        input("Press Enter to play a game against AI")
+        p4 = Player("Human","O",True,False)
+        PlayGame(board,p1,p4,False, True)
